@@ -30,17 +30,15 @@ local box = {}
 -- UI Scaling (Modify `UI_SCALE` to resize everything)
 --------------------------------------------------------------------------------
 local UI_H_SCALE = 1  
-local UI_V_SCALE = .86
+local UI_V_SCALE = .88
 
 -- Scaled button sizes
 local btnWidth = math.floor(50 * UI_H_SCALE)
 local btnHeight = math.floor(64 * UI_V_SCALE)
 local btnSize = {btnWidth, btnHeight}
 
--- Row spacing
-local rowSpacing = math.floor(5 * UI_H_SCALE)
 --------------------------------------------------------------------------------
--- ImGui color constants (as in your original code):
+-- ImGui color constants:
 --------------------------------------------------------------------------------
 local IMGUI_COL_Text           = 0
 local IMGUI_COL_Button         = 21
@@ -73,18 +71,18 @@ end
 
 --------------------------------------------------------------------------------
 -- Spell Lists:
---   Each spell has: label, name, level=10, bg_color, text_color, enabled=<bool>
+--   Each spell has: label, name, level, bg_color, text_color, enabled=<bool>
 --------------------------------------------------------------------------------
 
 -- Single Buffs (Protectra I–V, Shellra I–V, Blink, Aquaveil)
 local singleBuffs = {
-    { label = "Pro1",  name = "Protectra",     level = 10, bg_color = DEFAULT_RED_BG, text_color = DEFAULT_BLACK_TXT, enabled = true },
-    { label = "Pro2",  name = "Protectra II",  level = 10, bg_color = DEFAULT_RED_BG, text_color = DEFAULT_BLACK_TXT, enabled = false },
-    { label = "Pro3",  name = "Protectra III", level = 10, bg_color = DEFAULT_RED_BG, text_color = DEFAULT_BLACK_TXT, enabled = false },
-    { label = "Pro4",  name = "Protectra IV",  level = 10, bg_color = DEFAULT_RED_BG, text_color = DEFAULT_BLACK_TXT, enabled = false },
-    { label = "Pro5",  name = "Protectra V",   level = 10, bg_color = DEFAULT_RED_BG, text_color = DEFAULT_BLACK_TXT, enabled = false },
+    { label = "Pro",  name = "Protectra",     level = 10, bg_color = DEFAULT_RED_BG, text_color = DEFAULT_BLACK_TXT, enabled = true },
+    { label = "Pro2", name = "Protectra II",  level = 10, bg_color = DEFAULT_RED_BG, text_color = DEFAULT_BLACK_TXT, enabled = false },
+    { label = "Pro3", name = "Protectra III", level = 10, bg_color = DEFAULT_RED_BG, text_color = DEFAULT_BLACK_TXT, enabled = false },
+    { label = "Pro4", name = "Protectra IV",  level = 10, bg_color = DEFAULT_RED_BG, text_color = DEFAULT_BLACK_TXT, enabled = false },
+    { label = "Pro5", name = "Protectra V",   level = 10, bg_color = DEFAULT_RED_BG, text_color = DEFAULT_BLACK_TXT, enabled = false },
 
-    { label = "Shell", name = "Shellra",       level = 10, bg_color = DEFAULT_RED_BG, text_color = DEFAULT_BLACK_TXT, enabled = true },
+    { label = "Shell",  name = "Shellra",       level = 10, bg_color = DEFAULT_RED_BG, text_color = DEFAULT_BLACK_TXT, enabled = true },
     { label = "Shell2", name = "Shellra II",    level = 10, bg_color = DEFAULT_RED_BG, text_color = DEFAULT_BLACK_TXT, enabled = false },
     { label = "Shell3", name = "Shellra III",   level = 10, bg_color = DEFAULT_RED_BG, text_color = DEFAULT_BLACK_TXT, enabled = false },
     { label = "Shell4", name = "Shellra IV",    level = 10, bg_color = DEFAULT_RED_BG, text_color = DEFAULT_BLACK_TXT, enabled = false },
@@ -94,17 +92,18 @@ local singleBuffs = {
     { label = "Aqua",  name = "Aquaveil",      level = 10, bg_color = DEFAULT_RED_BG, text_color = DEFAULT_BLACK_TXT, enabled = true },
 }
 
--- Buff Spells (Sneak, Invisible)
+-- Buff Spells (Sneak, Invisible, and now Haste)
 local buffSpells = {
-    { label = "Sneak",     name = "Sneak",     level = 10, bg_color = DEFAULT_RED_BG, text_color = DEFAULT_BLACK_TXT, enabled = true },
+    { label = "Sneak", name = "Sneak",     level = 10, bg_color = DEFAULT_RED_BG, text_color = DEFAULT_BLACK_TXT, enabled = true },
     { label = "Invis", name = "Invisible", level = 10, bg_color = DEFAULT_RED_BG, text_color = DEFAULT_BLACK_TXT, enabled = false },
+    { label = "Haste", name = "Haste",     level = 10, bg_color = DEFAULT_RED_BG, text_color = DEFAULT_BLACK_TXT, enabled = true },
 }
 
 -- Erase Spells (Poisona, Silena, Erase)
 local eraseSpells = {
-    { label = "P-na", name = "Poisona", level = 10, bg_color = DEFAULT_RED_BG, text_color = DEFAULT_BLACK_TXT, enabled = true },
-    { label = "Silena",  name = "Silena",  level = 10, bg_color = DEFAULT_RED_BG, text_color = DEFAULT_BLACK_TXT, enabled = false },
-    { label = "Erase",   name = "Erase",   level = 10, bg_color = DEFAULT_RED_BG, text_color = DEFAULT_BLACK_TXT, enabled = false },
+    { label = "P-na",   name = "Poisona", level = 10, bg_color = DEFAULT_RED_BG, text_color = DEFAULT_BLACK_TXT, enabled = true },
+    { label = "Silena", name = "Silena",  level = 10, bg_color = DEFAULT_RED_BG, text_color = DEFAULT_BLACK_TXT, enabled = false },
+    { label = "Erase",  name = "Erase",   level = 10, bg_color = DEFAULT_RED_BG, text_color = DEFAULT_BLACK_TXT, enabled = false },
 }
 
 -- Cure/Regen Spells (Cure I–V, Regen I–IV)
@@ -240,7 +239,7 @@ local function GetHighestEnabledSpell(group, groupKey, pattern)
     local highest = nil
     local highestIndex = nil
     for i, sp in ipairs(group) do
-        if sp.enabled and sp.name:find(pattern) then
+        if sp.name:find(pattern) then
             local color = GetEffectiveColorForSpell(sp, groupKey, i)
             if color then
                 highest = sp
@@ -260,11 +259,9 @@ end
 local function GetEnabledSpells(group, groupKey)
     local list = {}
     for i, sp in ipairs(group) do
-        if sp.enabled then
-            local color = GetEffectiveColorForSpell(sp, groupKey, i)
-            if color then
-                table.insert(list, { spell = sp, index = i })
-            end
+        local color = GetEffectiveColorForSpell(sp, groupKey, i)
+        if color then
+            table.insert(list, { spell = sp, index = i })
         end
     end
     return list
@@ -279,6 +276,7 @@ local configLoaded = false
 -- Config window.
 -- (Shows all spells with toggles so the user can set the config state.)
 --------------------------------------------------------------------------------
+local showConfigBox = false
 local function DrawConfigBox()
     if not showConfigBox then return end
 
@@ -368,17 +366,16 @@ box.DrawWindow = function()
         local jobAbilities = {
             { label = "Rest", command = "/heal" },
             { label = "DivS", command = '/ja "Divine Seal" <me>' },
-            { label = "Dia", command = '/ma "Dia" <bt>' },
+            { label = "Dia",  command = '/ma "Dia II" <bt>' },
             { label = "Slow", command = '/ma "Slow" <bt>' },
             { label = "Para", command = '/ma "Paralyze" <bt>' },
+            { label = "Pois", command = '/ma "Poison" <bt>' },
             { label = "Aero", command = '/ma "Aero" <bt>' },
             { label = "Fire", command = '/ma "Fire" <bt>' },
-            { label = "", command = "" },  -- Blank Button
-            { label = "", command = "" },  -- Blank Button
-            { label = "", command = "" },  -- Blank Button
-            { label = "", command = "" },  -- Blank Button
-            { label = "", command = "" },  -- Blank Button
-			{ label = "", command = "" },  -- Blank Button
+            { label = "",     command = "" },  -- Blank Button
+            { label = "",     command = "" },  -- Blank Button
+            { label = "",     command = "" },  -- Blank Button
+            { label = "",     command = "" },  -- Blank Button
         }
 
         for _, ja in ipairs(jobAbilities) do
@@ -406,7 +403,7 @@ box.DrawWindow = function()
         local shellra = GetHighestEnabledSpell(singleBuffs, "singleBuffs", "Shellra")
         if shellra then table.insert(displayedSingleBuffs, shellra) end
         for i, sp in ipairs(singleBuffs) do
-            if sp.enabled and not sp.name:find("Protectra") and not sp.name:find("Shellra") then
+            if not sp.name:find("Protectra") and not sp.name:find("Shellra") then
                 local uniqueKey = string.format("singleBuffs_%d_%s", i, sp.name)
                 if configButtonState[uniqueKey] then
                     table.insert(displayedSingleBuffs, { spell = sp, index = i })
@@ -449,11 +446,11 @@ box.DrawWindow = function()
             for _, item in ipairs(displayedCureSpells) do
                 local sp = item.spell
                 if sp.name:find("Regen") then
-                    highestRegen = sp -- Ensure only highest Regen spell is used
+                    highestRegen = sp -- Only the last enabled Regen spell is kept
                 end
             end
 
-            -- Draw Cure Spells
+            -- Draw Cure Spells (skip Regen spells)
             for _, item in ipairs(displayedCureSpells) do
                 local sp = item.spell
                 if not sp.name:find("Regen") then
@@ -474,7 +471,7 @@ box.DrawWindow = function()
                 end
             end
 
-            -- Draw Highest Regen Spell if Available
+            -- Draw the highest Regen Spell if Available
             if highestRegen then
                 local highlightColor = GetHighlightColor(highestRegen.bg_color)
 
@@ -491,14 +488,13 @@ box.DrawWindow = function()
                 imgui.PopStyleColor(4)
             end
 
-            imgui.NewLine()
             imgui.PopID()
 
             imgui.PushID("BuffRow_" .. row)
 
             -- Buffs & Erase (Draw Below Cures)
             local displayedBuffSpells = GetEnabledSpells(buffSpells, "buffSpells")
-            for _, item in ipairs(displayedBuffSpells) do
+            for i, item in ipairs(displayedBuffSpells) do
                 imgui.PushID(item.spell.label)
                 local sp = item.spell
                 local highlightColor = GetHighlightColor(sp.bg_color)
@@ -514,30 +510,11 @@ box.DrawWindow = function()
 
                 imgui.PopStyleColor(4)
                 imgui.PopID()
-                imgui.SameLine()
-            end
-
-            local displayedEraseSpells = GetEnabledSpells(eraseSpells, "eraseSpells")
-            for _, item in ipairs(displayedEraseSpells) do
-                imgui.PushID(item.spell.label)
-                local sp = item.spell
-                local highlightColor = GetHighlightColor(sp.bg_color)
-                imgui.PushStyleColor(IMGUI_COL_Button, sp.bg_color)
-                imgui.PushStyleColor(IMGUI_COL_ButtonHovered, highlightColor)
-                imgui.PushStyleColor(IMGUI_COL_ButtonActive, highlightColor)
-                imgui.PushStyleColor(IMGUI_COL_Text, sp.text_color)
-
-                if imgui.Button(sp.label, {btnSize[1], btnSize[2] / 2}) then
-                    local cmd = string.format('/ma "%s" %s', sp.name, targetString)
-                    sendCommand(cmd)
+                if i < #displayedBuffSpells then
+                    imgui.SameLine()
                 end
-
-                imgui.PopStyleColor(4)
-                imgui.PopID()
-                imgui.SameLine()
             end
 
-            imgui.NewLine()
             imgui.PopID()
         end
 
@@ -546,7 +523,7 @@ box.DrawWindow = function()
     imgui.End()
 end
 ---------------------------------------------------------------------------
--- packet detection:
+-- Packet detection:
 --------------------------------------------------------------------------------
 -- Zoning detection (based on Nostrum)
 ashita.events.register('outgoing_packet', 'zone_detect_out', function(id, size, packet)
